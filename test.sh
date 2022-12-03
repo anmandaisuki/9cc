@@ -12,12 +12,13 @@ assert(){
             echo "$input => $actual"
         else
             echo "$input => $actual something wrong"
-            exit 1
+            exit 1 
         fi
 }
 
 assert 0 0
 assert 42 42
 assert 21 5+16+5-5
+assert 41 " 12 + 31 -5 + 3"
 
 echo OK
