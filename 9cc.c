@@ -146,6 +146,7 @@ typedef struct Node Node;
 //proto type 
 Node *expr();
 Node *mul();
+Node *unary();
 Node *primary();
 
 
@@ -186,7 +187,8 @@ Node *expr(){
 }
 
 Node *mul(){
-    Node *node = primary();
+    // Node *node = primary();
+    Node *node = unary();
 
     for(;;){
         if(consume('*'))
@@ -196,6 +198,15 @@ Node *mul(){
         else
             return node;
     }
+}
+
+Node *unary(){
+
+    if(consume('+'))
+        return primary();
+    if(consume('-'))
+        return new_node(ND_SUB, new_node_num(0),primary()); // 0 - primary()
+    return primary();
 }
 
 Node *primary(){
