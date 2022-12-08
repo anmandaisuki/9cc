@@ -20,6 +20,7 @@ struct Token{
     Token *next;
     int val;
     char *str;
+    int len; 
 };
 
 Token *token; //global type. Used in several function or main()
@@ -48,16 +49,21 @@ void error_at(char *loc, char *fmt, ...){
 }
 
 //
-bool consume(char op){
-    if(token->kind != TK_RESERVED || token->str[0] != op){
+bool consume(char *op){
+    if(token->kind != TK_RESERVED ||
+     token->len != strlen(op)||
+     memcmp(token->str,op,token->len))
         return false;
-    }
+
     token = token-> next;
     return true;
 }
 
-void expect(char op){
-    if(token->kind != TK_RESERVED || token->str[0] != op ){
+void expect(char *op){
+    if(token->kind != TK_RESERVED || 
+    token->len != strlen(op)||
+     memcmp(token->str,op,token->len))
+    {
         // error("this is not '%c'", op);
         error_at(token->str,"this is not '%c",op);
     }
@@ -81,12 +87,18 @@ bool at_eof(){
 //cur is initialized area
 // cur: initilezed memory and filled inside of new_token()
 // tok is reserved memory area handed to cur.   
-Token *new_token(TokenKind kind, Token *cur, char *str){
+Token *new_token(TokenKind kind, Token *cur, char *str, int len){
     Token *tok = calloc(1, sizeof(Token)); // reserve next token memory
     tok->kind = kind;
     tok->str = str; 
+    tok->len = len;
     cur->next = tok;
     return tok;
+}
+
+//1 is correspond *p=*q
+bool startwith(char *p, char *q){
+    return memcmp(p,q,strlen(q)) == 0; // reverse result 
 }
 
 // *p is input code
@@ -108,19 +120,30 @@ Token *tokenize(char *p){
             continue;
         }
 
-        if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')'){
+        if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>'){
 
-            cur = new_token(TK_RESERVED, cur, p++); // p++: incriment is done after procedure. ++p : incriment is done before procedure
+            cur = new_token(TK_RESERVED, cur, p++,1); // p++: incriment is done after procedure. ++p : incriment is done before procedure
             
+            continue;
+        }
+
+        if(startwith(p,"==") || startwith(p, "!=") || startwith(p,"<=") || startwith(p, ">=")){
+
+            cur = new_token(TK_RESERVED, cur, p,2); // p++: incriment is done after procedure. ++p : incriment is done before procedure
+            p+=2; // pointer is incremented 2
+            
+
             continue;
         }
 
         // check number or not
         if(isdigit(*p)){
-            cur = new_token(TK_NUM, cur, p);
+            cur = new_token(TK_NUM, cur, p,0);
+            char *q = p;
             cur->val = strtol(p, &p, 10); //p is treated as string not char. So &p is regarded as string pointer. 10 is decimal
+            cur->len = p-q;
             // p is updated to next token. 
-            // every input is char. 12 -> '1' '2' (ascii code) 0x51 0x52
+            // every input is char. 12 -> "1" "2" (ascii code) 0x51 0x52
             // strtol is translate ascii char to number
             continue;
         }
@@ -129,7 +152,7 @@ Token *tokenize(char *p){
         error_at(p,"tokenize process is failed. Code is not correct.\n Check the code indicated by ^ \n");
     }
 
-    new_token(TK_EOF, cur, p);
+    new_token(TK_EOF, cur, p,0);
     return head.next;
 }
 
@@ -139,12 +162,19 @@ typedef enum {
     ND_MUL,
     ND_DIV,
     ND_NUM,
+    ND_EQ, //==
+    ND_NE, //!=
+    ND_LT, //<
+    ND_LE //<=
 } NodeKind;
 
 typedef struct Node Node;
 
 //proto type 
 Node *expr();
+Node *equality();
+Node *relational();
+Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
@@ -174,16 +204,61 @@ Node *new_node_num(int val){
 
 
 Node *expr(){
-    Node *node = mul();
+    // Node *node = mul();
+    return equality();
+
+    // for(;;){
+    //     if(consume('+'))
+    //         node = new_node(ND_ADD, node, mul());
+    //     else if(consume('-'))
+    //         node = new_node(ND_SUB, node, mul());
+    //     else
+    //         return node;
+    // }
+}
+
+Node *equality(){
+    Node *node = relational();
 
     for(;;){
-        if(consume('+'))
-            node = new_node(ND_ADD, node, mul());
-        else if(consume('-'))
-            node = new_node(ND_SUB, node, mul());
+        if(consume("=="))
+            node = new_node(ND_EQ,node,relational());
+        else if(consume("!="))
+            node = new_node(ND_NE,node,relational());
+        else 
+            return node;
+    }
+}
+
+Node *relational(){
+    Node *node = add();
+
+    for(;;){
+        if(consume("<") )
+            node = new_node(ND_LT, node,add());
+        if(consume(">") )
+            node = new_node(ND_LT,add(), node);
+        if(consume("<=") )
+            node = new_node(ND_LE, node,add());
+        if(consume(">="))
+            node = new_node(ND_LE, add(),node);
         else
             return node;
     }
+}
+
+Node *add(){
+    Node *node = mul();
+
+    for(;;){
+        if(consume("+"))
+            node = new_node(ND_ADD,node,mul());
+        else if(consume("-"))
+            node = new_node(ND_SUB,node,mul());
+        else 
+            return node;
+    }
+
 }
 
 Node *mul(){
@@ -191,10 +266,10 @@ Node *mul(){
     Node *node = unary();
 
     for(;;){
-        if(consume('*'))
-            node = new_node(ND_MUL, node, primary());
-        else if (consume('/'))
-            node = new_node(ND_DIV, node, primary());
+        if(consume("*"))
+            node = new_node(ND_MUL, node, unary());
+        else if (consume("/"))
+            node = new_node(ND_DIV, node, unary());
         else
             return node;
     }
@@ -202,17 +277,17 @@ Node *mul(){
 
 Node *unary(){
 
-    if(consume('+'))
+    if(consume("+"))
         return primary();
-    if(consume('-'))
+    if(consume("-"))
         return new_node(ND_SUB, new_node_num(0),primary()); // 0 - primary()
     return primary();
 }
 
 Node *primary(){
-    if(consume('(')){
+    if(consume("(")){
         Node *node = expr();
-        expect(')');
+        expect(")");
         return node;
     }
 
@@ -248,6 +323,22 @@ void gen(Node *node){
         printf("    cqo\n");
         printf("    idiv rdi\n");
         break;
+    case ND_EQ:
+        printf("    cmp rax, rdi\n");
+        printf("    sete al\n");
+        printf("    movzb rax, al\n");
+    case ND_NE:
+        printf("    cmp rax, rdi\n");
+        printf("    setne al\n");
+        printf("    movzb rax, al\n");
+    case ND_LE:
+        printf("    cmp rax, rdi\n");
+        printf("    setle al\n");
+        printf("    movzb rax, al\n");
+    case ND_LT:
+        printf("    cmp rax, rdi\n");
+        printf("    setl al\n");
+        printf("    movzb rax, al\n");
     }
 
     printf("    push rax\n");
