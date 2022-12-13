@@ -11,6 +11,7 @@ typedef enum{
     TK_RESERVED, // anything but number. + or - 
     TK_NUM,
     TK_EOF, //EOF end of file
+    TK_IDENT,
 } TokenKind;
 
 typedef struct Token Token; 

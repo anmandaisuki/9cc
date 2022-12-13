@@ -96,6 +96,11 @@ Token *tokenize(char *p){
             continue;
         }
 
+        if('a' <= *p && *p <= 'z'){
+            cur=new_token(TK_IDENT,cur,p++,1);
+            continue;
+        }
+
         if(startwith(p,"==") || startwith(p, "!=") || startwith(p,"<=") || startwith(p, ">=")){
 
             cur = new_token(TK_RESERVED, cur, p,2); // p++: incriment is done after procedure. ++p : incriment is done before procedure
