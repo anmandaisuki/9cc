@@ -53,12 +53,17 @@ typedef enum {
     ND_EQ, //==
     ND_NE, //!=
     ND_LT, //<
-    ND_LE //<=
+    ND_LE, //<=
+    ND_ASSIGN, //=
+    ND_LVAR // local variable
 } NodeKind;
 
 typedef struct Node Node;
 
+void program();
+Node *stmt();
 Node *expr();
+Node *assign();
 Node *equality();
 Node *relational();
 Node *add();
@@ -66,12 +71,15 @@ Node *mul();
 Node *unary();
 Node *primary();
 
+extern Node *code[100];
+
 
 struct Node {
     NodeKind kind;
     Node *lhs;
     Node *rhs;
     int val;
+    int offset;
 };
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs);

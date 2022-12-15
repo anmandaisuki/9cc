@@ -28,6 +28,16 @@ bool consume(char *op){
     return true;
 }
 
+Token* consume_ident(){
+    Token* r_token;
+    if(token->kind == TK_IDENT){
+        r_token = token;
+        token = token->next;
+        return r_token;
+    }
+    return NULL;
+}
+
 void expect(char *op){
     if(token->kind != TK_RESERVED || 
     token->len != strlen(op)||
@@ -89,7 +99,7 @@ Token *tokenize(char *p){
             continue;
         }
 
-        if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>'){
+        if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>' || *p == '=' || *p == ';'){
 
             cur = new_token(TK_RESERVED, cur, p++,1); // p++: incriment is done after procedure. ++p : incriment is done before procedure
             
@@ -100,6 +110,7 @@ Token *tokenize(char *p){
             cur=new_token(TK_IDENT,cur,p++,1);
             continue;
         }
+
 
         if(startwith(p,"==") || startwith(p, "!=") || startwith(p,"<=") || startwith(p, ">=")){
 
@@ -132,13 +143,21 @@ Token *tokenize(char *p){
 
 
 //proto type 
+void program();
+Node *stmt();
+
 Node *expr();
+
+Node *assign();
+
 Node *equality();
 Node *relational();
 Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
+
+Node *code[100];
 
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs){
@@ -156,10 +175,23 @@ Node *new_node_num(int val){
     return node;
 }
 
+void program(){
+    int i = 0;
+
+    while(!at_eof())
+        code[i++] = stmt();
+    code[i] = NULL;
+}
+
+Node *stmt(){
+    Node *node =expr();
+    expect(";");
+    return node;
+}
 
 Node *expr(){
     // Node *node = mul();
-    return equality();
+    return assign();
 
     // for(;;){
     //     if(consume('+'))
@@ -169,6 +201,15 @@ Node *expr(){
     //     else
     //         return node;
     // }
+}
+
+Node *assign(){
+    Node *node = equality();
+
+    if(consume("="))
+        new_node(ND_ASSIGN,node,assign());
+
+    return node;
 }
 
 Node *equality(){
@@ -242,6 +283,15 @@ Node *primary(){
     if(consume("(")){
         Node *node = expr();
         expect(")");
+        return node;
+    }
+
+    Token *tok = consume_ident();
+
+    if(tok){ //if(tok != NULL)
+        Node *node = calloc(1,sizeof(Node));
+        node->kind = ND_LVAR;
+        node->offset = (tok->str[0] - 'a' + 1) * 8;
         return node;
     }
 
