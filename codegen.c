@@ -3,6 +3,7 @@
 void gen_lval(Node *node){
     if(node->kind != ND_LVAR)
         fprintf(stderr, "LVAL is not appropriate");
+
     printf("    mov rax, rbp\n"); // rbp is base address?
     printf("    sub rax, %d\n", node->offset);
     printf("    push rax\n");
@@ -10,6 +11,16 @@ void gen_lval(Node *node){
 
 // recursive function : gen() is called in gen() 
 void gen(Node *node){
+
+    if(node->kind == ND_RETURN){
+        gen(node->lhs); // for return value
+        printf("    pop rax\n");
+        printf("    mov rsp, rbp\n");
+        printf("    pop rbp\n");
+        printf("    ret\n");
+        return;
+    }
+
 
     switch(node->kind){
         case ND_NUM:
@@ -24,6 +35,12 @@ void gen(Node *node){
         case ND_ASSIGN:
             gen_lval(node->lhs);
             gen(node->rhs);
+
+            printf("    pop rdi\n");
+            printf("    pop rax\n");
+            printf("    mov [rax], rdi\n");
+            printf("    push rdi\n");
+        return;
     }
 
     gen(node->lhs); // unless node->lhs is empty, gen() is called in gen(). The node without node->lhs is bottom of the tree

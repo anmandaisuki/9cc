@@ -2,6 +2,7 @@
 
 
 Token *token; //global type. Used in several function or main()
+LVar *locals;
 
 char *user_input;
 
@@ -14,6 +15,7 @@ void error_at(char *loc, char *fmt, ...){
     fprintf(stderr, "%*s", pos, " "); // pos: the number of " "
     fprintf(stderr, "^ ");
     vfprintf(stderr, fmt, ap);
+    fprintf(stderr,"  Input token value is %c", *loc);
     fprintf(stderr, "\n");
     exit(1);
 }
@@ -43,6 +45,9 @@ void expect(char *op){
     token->len != strlen(op)||
      memcmp(token->str,op,token->len))
     {
+        if(*op == ';')
+            error_at(token->str, "; is expected at the end of line");
+
         // error("this is not '%c'", op);
         error_at(token->str,"this is not '%c",op);
     }
@@ -63,7 +68,7 @@ bool at_eof(){
     return token->kind ==TK_EOF;
 }
 
-//cur is initialized area
+//cur is initialized area. Return next token pointer.
 // cur: initilezed memory and filled inside of new_token()
 // tok is reserved memory area handed to cur.   
 Token *new_token(TokenKind kind, Token *cur, char *str, int len){
@@ -78,6 +83,33 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len){
 //1 is correspond *p=*q
 bool startwith(char *p, char *q){
     return memcmp(p,q,strlen(q)) == 0; // reverse result 
+}
+
+// lval is checked if lval is appeared already or not.(Exist in locals or not) If lval is new, NULL is returned.
+int lval_judge(char *p){
+    int n = 0;
+
+    while('a' <= *p && *p <= 'z') {
+        n++;
+        p++;
+    }
+
+    return n;
+}
+
+LVar *find_lvar(Token *tok){
+    for (LVar *var = locals; var; var = var->next)
+        if(var->len == tok->len && !memcmp(tok->str, var->name, var->len))
+            return var;
+    return NULL; 
+}
+
+// to check token specific token word. ex) right -> return; wrong -> returnx 
+int is_alnum(char c){
+    return ('a' <= c && c <= 'z') ||
+           ('A' <= c && c <= 'Z') ||
+           ('0' <= c && c <= '9') ||
+           (c == '_');
 }
 
 // *p is input code
@@ -99,6 +131,12 @@ Token *tokenize(char *p){
             continue;
         }
 
+        if (strncmp(p, "return", 6) == 0 && !is_alnum(p[6])){
+            cur = new_token(TK_RETURN,cur,p,6);
+            p += 6;
+            continue;
+        }
+
         if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>' || *p == '=' || *p == ';'){
 
             cur = new_token(TK_RESERVED, cur, p++,1); // p++: incriment is done after procedure. ++p : incriment is done before procedure
@@ -106,20 +144,13 @@ Token *tokenize(char *p){
             continue;
         }
 
-        if('a' <= *p && *p <= 'z'){
-            cur=new_token(TK_IDENT,cur,p++,1);
-            continue;
-        }
-
-
         if(startwith(p,"==") || startwith(p, "!=") || startwith(p,"<=") || startwith(p, ">=")){
 
             cur = new_token(TK_RESERVED, cur, p,2); // p++: incriment is done after procedure. ++p : incriment is done before procedure
             p+=2; // pointer is incremented 2
-            
-
             continue;
         }
+
 
         // check number or not
         if(isdigit(*p)){
@@ -132,6 +163,21 @@ Token *tokenize(char *p){
             // strtol is translate ascii char to number
             continue;
         }
+
+        if('a' <= *p && *p <= 'z'){
+
+            if(lval_judge(p)){
+                int n = lval_judge(p);
+                cur=new_token(TK_IDENT,cur,p,n);
+                p+=n;
+                //printf("lval word is detected as %d words\n", n);
+                continue;
+            }
+
+            cur=new_token(TK_IDENT,cur,p++,1);
+            continue;
+        }
+
 
         // error(" tokenize failed");
         error_at(p,"tokenize process is failed. Code is not correct.\n Check the code indicated by ^ \n");
@@ -184,9 +230,22 @@ void program(){
 }
 
 Node *stmt(){
-    Node *node =expr();
-    expect(";");
+    Node *node;
+    if(token->kind == TK_RETURN){
+        token = token->next;
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_RETURN;
+        node->lhs = expr(); // expr()>...num node retuned
+    }else{
+        node = expr();
+    }
+
+    if(!consume(";"))
+        error_at(token->str," ; is expected but doesn't exist.");
     return node;
+    // Node *node =expr();
+    // expect(";");
+    // return node;
 }
 
 Node *expr(){
@@ -207,7 +266,7 @@ Node *assign(){
     Node *node = equality();
 
     if(consume("="))
-        new_node(ND_ASSIGN,node,assign());
+        node = new_node(ND_ASSIGN,node,assign());
 
     return node;
 }
@@ -286,13 +345,28 @@ Node *primary(){
         return node;
     }
 
-    Token *tok = consume_ident();
-
+    //check the lval has already existed in locals;
+    Token *tok = consume_ident();  // return lval token address (global token is moved forward)
     if(tok){ //if(tok != NULL)
         Node *node = calloc(1,sizeof(Node));
         node->kind = ND_LVAR;
-        node->offset = (tok->str[0] - 'a' + 1) * 8;
+
+        LVar *lvar = find_lvar(tok);
+        if(lvar){ // tok is already existed in locals
+            node->offset = lvar->offset;
+        } else{ // register new tok in locals
+            lvar = calloc(1,sizeof(LVar));
+            lvar->next = locals; // pointer of current locals is next(before) lvals (previous lvals forward pointer)
+            lvar->name = tok->str;
+            lvar->len = tok->len;
+            lvar->offset =locals->offset + 8;
+            node->offset = lvar->offset;
+            locals=lvar; // pointer of current locals is updated with this lvar
+        }
+
         return node;
+        // node->offset = (tok->str[0] - 'a' + 1) * 8;
+        // return node;
     }
 
     return new_node_num(expect_number());

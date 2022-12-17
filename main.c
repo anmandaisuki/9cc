@@ -8,6 +8,21 @@ int main(int argc, char **argv){
 
     user_input = argv[1];
     token = tokenize(argv[1]);
+
+//For Debug begin 
+
+    //TOken checkment
+    // Token *token_shadow = token;
+    // for(int i = 1 ; i < 5; i++){
+
+    //     printf("No%d token_kind[%d], token_len[%d], token_str_initial[%c] \n",i,token_shadow->kind,token_shadow->len,*token_shadow->str);
+    //     token_shadow = token_shadow->next;
+    // }
+    // printf("\n");
+
+//For Debug end
+
+    locals = calloc(1,sizeof(LVar));
     // Node *node = expr();
     program();
 
