@@ -64,6 +64,35 @@ int expect_number(){
     return val;
 }
 
+bool check_ifElse(){
+    if(token->kind == TK_RESERVED && memcmp(token->str,"if",strlen("if")) == 0){
+
+        #ifdef DEBUG_ON
+        printf("if else is checking....\n");
+        #endif
+
+        Token *search_token;
+        search_token = token;
+        for(;;){
+            search_token = search_token->next;
+            if(memcmp(search_token->str,"else",strlen("else")) == 0)
+                return true;
+            if(memcmp(search_token->str,"if",strlen("if")) == 0)
+                return false;
+            if(search_token->next == NULL)
+                return false;
+        }
+    }
+
+    #ifdef DEBUG_ON
+    printf("if else is not found....\n");
+    #endif
+
+    return false;
+    //printf("if is not found\n");
+    //error_at(token->str,"check_ifElse() is failed \n");
+}
+
 bool at_eof(){
     return token->kind ==TK_EOF;
 }
@@ -136,6 +165,28 @@ Token *tokenize(char *p){
             p += 6;
             continue;
         }
+
+        if(startwith(p,"if")){
+            cur = new_token(TK_RESERVED, cur, p,2); 
+            p+=2; 
+            continue;
+        }
+        if(startwith(p, "else")){
+            cur = new_token(TK_RESERVED, cur, p,4); 
+            p+=4; 
+            continue;
+        }
+        if(startwith(p,"while") ){
+            cur = new_token(TK_RESERVED, cur, p,5); 
+            p+=5; 
+            continue;
+        }
+        if(startwith(p, "for")){
+            cur = new_token(TK_RESERVED, cur, p,3); 
+            p+=3; 
+            continue;
+        }
+
 
         if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>' || *p == '=' || *p == ';'){
 
@@ -230,6 +281,11 @@ void program(){
 }
 
 Node *stmt(){
+
+    #ifdef DEBUG_ON
+    printf(" stmt process\n");
+    #endif
+
     Node *node;
     if(token->kind == TK_RETURN){
         token = token->next;
@@ -237,9 +293,58 @@ Node *stmt(){
         node->kind = ND_RETURN;
         node->lhs = expr(); // expr()>...num node retuned
     }else{
-        node = expr();
-    }
+        //node = expr();
+        if(check_ifElse()){
+            if(!consume("if"))
+                error_at(token->str," if is failed ");
+            if(!consume("("))
+                error_at(token->str," ( is not found after 'if' ");
+            
+            node = calloc(1,sizeof(Node));
+            node->kind = ND_IFELSE;
+            node->lhs = expr();
+            
+            if(!consume(")"))
+                error_at(token->str," ) is not found after 'if' ");
 
+            node->rhs = stmt();
+
+            if(consume("else"))
+                node = new_node(ND_IFELSE,node, stmt());
+
+            return node;
+        }
+
+        if(consume("if")){
+            if(!consume("("))
+                error_at(token->str," () is not found after 'if' ");
+            
+            node = calloc(1,sizeof(Node));
+            node->kind = ND_IF;
+            node->lhs = expr();
+
+            if(!consume(")"))
+                error_at(token->str," () is not found after 'if' ");
+
+            node->rhs = stmt();
+
+            return node;
+        }
+        // if(consume("while")){
+        //     if(!consume("(")){
+        //         error_at(token->str," () is not found after 'while' ");
+        //     }
+        //     return node;
+        // }
+        // if(consume("for")){
+        //     if(!consume("(")){
+        //         error_at(token->str," () is not found after 'for' ");
+        //     }
+        //     return node;
+        // }
+    
+    }
+    node = expr();
     if(!consume(";"))
         error_at(token->str," ; is expected but doesn't exist.");
     return node;

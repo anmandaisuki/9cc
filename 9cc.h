@@ -5,14 +5,19 @@
 #include <stdbool.h>
 #include <string.h>
 
-
+// #define DEBUG_ON
 
 typedef enum{
-    TK_RESERVED, // anything but number. + or - 
+    TK_RESERVED, // anything but number. + or - or == and else
     TK_NUM,
     TK_EOF, //EOF end of file
     TK_IDENT,
+    TK_RETURN
 } TokenKind;
+
+
+
+
 
 typedef struct Token Token; 
 
@@ -27,6 +32,17 @@ struct Token{
 extern Token *token; 
 
 extern char *user_input;
+
+typedef struct LVar LVar;
+
+struct LVar {
+    LVar *next;
+    char *name;
+    int len;
+    int offset;
+};
+LVar *find_lvar(Token *tok);
+extern LVar *locals;
 
 void error_at(char *loc, char *fmt, ...);
 
@@ -55,7 +71,10 @@ typedef enum {
     ND_LT, //<
     ND_LE, //<=
     ND_ASSIGN, //=
-    ND_LVAR // local variable
+    ND_LVAR, // local variable
+    ND_RETURN,
+    ND_IF,
+    ND_IFELSE// if, while, for
 } NodeKind;
 
 typedef struct Node Node;

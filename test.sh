@@ -28,5 +28,6 @@ assert(){
 assert 12 'a=1; b = 5 * 6-8; a + b/2;'
 assert 5 'return 5;'
 assert 5 'return 5; return 6;'
+assert 2 'a=1; if(a)1+1;'
 
 echo OK

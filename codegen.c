@@ -40,7 +40,32 @@ void gen(Node *node){
             printf("    pop rax\n");
             printf("    mov [rax], rdi\n");
             printf("    push rdi\n");
-        return;
+            return;
+
+        case ND_IF: //if
+            gen(node->lhs);
+            printf("    pop rax \n");
+            printf("    cmp rax, 0 \n");
+            printf("    je  .LendXXX \n");
+            gen(node->rhs);
+            printf(".LendXXX: \n");
+            return;
+
+        case ND_IFELSE:
+            if(node->lhs->kind != ND_IFELSE){
+                gen(node->lhs);
+                printf("    pop rax \n");
+                printf("    cmp rax, 0 \n");
+                printf("    je  .Lelse \n");
+                gen(node->rhs);
+                printf("    jmp .LendXXX \n");
+                return;
+            }
+            gen(node->lhs);
+            printf(".LelseXXX\n");
+            gen(node->rhs);
+            printf(".LendXXX\n");
+            return;
     }
 
     gen(node->lhs); // unless node->lhs is empty, gen() is called in gen(). The node without node->lhs is bottom of the tree
@@ -49,7 +74,7 @@ void gen(Node *node){
     printf("    pop rdi\n");
     printf("    pop rax\n");
 
-    switch (node->kind)
+    switch (node->kind) 
     {
     case ND_ADD:
         printf("    add rax, rdi\n");
@@ -80,6 +105,7 @@ void gen(Node *node){
         printf("    cmp rax, rdi\n");
         printf("    setl al\n");
         printf("    movzb rax, al\n");
+
     }
 
     printf("    push rax\n");

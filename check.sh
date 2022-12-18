@@ -9,6 +9,8 @@ assert(){
         ./9cc "$input" 
 }
 
-assert 'a=1; b = 5 * 6-8; a + b/2;'
-assert 'aak=1;'
-assert 'return 5; return 6;'
+# assert 'a=1; b = 5 * 6-8; a + b/2;'
+# assert 'aak=1;'
+# assert 'return 5; return 6;'
+# assert 'a = 0;if(a)1+1;1+5;'
+assert 'if(0)1+1; else 3;'
