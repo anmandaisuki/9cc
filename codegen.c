@@ -66,6 +66,17 @@ void gen(Node *node){
             gen(node->rhs);
             printf(".LendXXX\n");
             return;
+        
+        case ND_WHILE:
+            printf(".LbeginXXX\n");
+            gen(node->lhs);
+            printf("    pop rax\n");
+            printf("    cmp rax, 0\n");
+            printf("    je .LendXXX\n");
+            gen(node->rhs);
+            printf("    jmp .LbeginXXX\n");
+            printf(".LendXXX\n");
+            return;
     }
 
     gen(node->lhs); // unless node->lhs is empty, gen() is called in gen(). The node without node->lhs is bottom of the tree

@@ -330,12 +330,23 @@ Node *stmt(){
 
             return node;
         }
-        // if(consume("while")){
-        //     if(!consume("(")){
-        //         error_at(token->str," () is not found after 'while' ");
-        //     }
-        //     return node;
-        // }
+
+        if(consume("while")){
+            if(!consume("(")){
+                error_at(token->str," ( is not found after 'while' ");
+            }
+
+            node = calloc(1,sizeof(Node));
+            node->kind = ND_WHILE;
+            node->lhs = expr();
+
+            if(!consume(")"))
+                error_at(token->str," ) is not found after 'while' ");
+            
+            node->rhs = stmt();
+
+            return node;
+        }
         // if(consume("for")){
         //     if(!consume("(")){
         //         error_at(token->str," () is not found after 'for' ");
