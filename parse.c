@@ -347,15 +347,47 @@ Node *stmt(){
 
             return node;
         }
-        // if(consume("for")){
-        //     if(!consume("(")){
-        //         error_at(token->str," () is not found after 'for' ");
-        //     }
-        //     return node;
-        // }
-    
+
+        if(consume("for")){  // for(A;B;C)D 
+            if(!consume("(")){
+                error_at(token->str," () is not found after 'for' ");
+            }
+
+            node = calloc(1,sizeof(Node));
+            node->kind = ND_FOR;
+
+            if(token->str != ';')
+                 node->lhs = expr();
+
+            consume(";");
+            
+            if(token->str != ';')
+                 node->rhs = expr();
+
+            consume(";");
+            
+            Node *C;
+
+            if(token-> str != ';')
+                C = expr();
+
+            consume(";");
+
+            if(!consume(")"))
+                error_at(token->str," () is not found after 'if' ");
+
+            Node *D;
+            D = stmt();
+      
+            node = new_node(ND_FOR,node,D);
+            node = new_node(ND_FOR, C, node);
+
+            return node;
+        }
+
+        node = expr();
     }
-    node = expr();
+    
     if(!consume(";"))
         error_at(token->str," ; is expected but doesn't exist.");
     return node;
@@ -365,6 +397,11 @@ Node *stmt(){
 }
 
 Node *expr(){
+
+    #ifdef DEBUG_ON
+        printf("expr() is called\n");
+    #endif
+
     // Node *node = mul();
     return assign();
 
