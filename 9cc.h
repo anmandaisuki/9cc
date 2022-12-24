@@ -6,6 +6,7 @@
 #include <string.h>
 
 // #define DEBUG_ON
+#define BLOCK_CODE_NUM 4
 
 typedef enum{
     TK_RESERVED, // anything but number. + or - or == and else
@@ -14,8 +15,6 @@ typedef enum{
     TK_IDENT,
     TK_RETURN
 } TokenKind;
-
-
 
 
 
@@ -74,7 +73,12 @@ typedef enum {
     ND_LVAR, // local variable
     ND_RETURN,
     ND_IF,
-    ND_IFELSE// if, while, for
+    ND_IFELSE,// if, while, for
+    ND_WHILE,
+    ND_FOR1,
+    ND_FOR2, 
+    ND_FOR3, 
+    ND_BLOCK
 } NodeKind;
 
 typedef struct Node Node;
@@ -99,6 +103,7 @@ struct Node {
     Node *rhs;
     int val;
     int offset;
+    Node *block[BLOCK_CODE_NUM];
 };
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
