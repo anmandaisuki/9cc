@@ -187,20 +187,20 @@ Token *tokenize(char *p){
             continue;
         }
 
-
-        if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>' || *p == '=' || *p == ';'){
-
-            cur = new_token(TK_RESERVED, cur, p++,1); // p++: incriment is done after procedure. ++p : incriment is done before procedure
-            
-            continue;
-        }
-
         if(startwith(p,"==") || startwith(p, "!=") || startwith(p,"<=") || startwith(p, ">=")){
 
             cur = new_token(TK_RESERVED, cur, p,2); // p++: incriment is done after procedure. ++p : incriment is done before procedure
             p+=2; // pointer is incremented 2
             continue;
         }
+
+        if(*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>' || *p == '=' || *p == ';'|| *p == '{'|| *p =='}'){
+
+            cur = new_token(TK_RESERVED, cur, p++,1); // p++: incriment is done after procedure. ++p : incriment is done before procedure
+            
+            continue;
+        }
+
 
 
         // check number or not
@@ -293,7 +293,41 @@ Node *stmt(){
         node->kind = ND_RETURN;
         node->lhs = expr(); // expr()>...num node retuned
     }else{
-        //node = expr();
+
+        if(consume("{")){
+
+            #ifdef DEBUG_ON
+            printf("block is creating \n \n");
+            #endif
+                node = calloc(1,sizeof(Node));
+                node->kind = ND_BLOCK;
+                Node *block[BLOCK_CODE_NUM];
+                // block = calloc(BLOCK_CODE_NUM,sizeof(Node));
+                // *node->block = block;d
+
+                //block = (Node*)calloc(sizeof(Node),BLOCK_CODE_NUM);
+                int i = 0;
+            while(!consume("}")){
+                if(i == BLOCK_CODE_NUM){
+                error_at(token->str,"code is too much in { } block");
+                }
+
+                // block[i]=calloc(1,sizeof(Node));
+                block[i] = stmt();
+
+                node->block[i] = block[i];
+
+                i++;
+            }
+
+            #ifdef DEBUG_ON
+            printf("BLOCK node is created \n \n");
+            #endif
+
+            //node->block = *block;
+            return node;
+        }
+        
         if(check_ifElse()){
             if(!consume("if"))
                 error_at(token->str," if is failed ");
@@ -354,33 +388,33 @@ Node *stmt(){
             }
 
             node = calloc(1,sizeof(Node));
-            node->kind = ND_FOR;
+            node->kind = ND_FOR2;
 
-            if(token->str != ';')
+            if(token->str != ";")
                  node->lhs = expr();
 
             consume(";");
             
-            if(token->str != ';')
+            if(token->str != ";")
                  node->rhs = expr();
 
             consume(";");
             
             Node *C;
 
-            if(token-> str != ';')
-                C = expr();
-
-            consume(";");
+            C = expr();
 
             if(!consume(")"))
                 error_at(token->str," () is not found after 'if' ");
 
             Node *D;
             D = stmt();
+
+            Node *right_node = new_node(ND_FOR3,C,D);
+            node = new_node(ND_FOR1,node,right_node);
       
-            node = new_node(ND_FOR,node,D);
-            node = new_node(ND_FOR, C, node);
+            // node = new_node(ND_FOR,node,D);
+            // node = new_node(ND_FOR, C, node);
 
             return node;
         }

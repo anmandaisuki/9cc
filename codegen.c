@@ -78,31 +78,44 @@ void gen(Node *node){
             printf(".LendXXX:\n");
             return;
 
-        case ND_FOR:
-            if(node->lhs->kind != ND_FOR && node->rhs->kind != ND_FOR){
-                gen(node->lhs);
-                printf(".LbeginXXX:\n");
-                gen(node->rhs);
-                return;
-            }
+        case ND_FOR1:
+        
+               gen(node->lhs); 
+               gen(node->rhs); 
 
-            if(node->lhs->kind == ND_FOR && node->rhs->rhs->kind != ND_FOR){
-                gen(node->lhs);
-                printf("    pop rax\n");
-                printf("    cmp rax,0\n");
-                printf("    je .LendXXX\n");
-                gen(node->rhs);
-                return;
-            }
+               return;
 
-            if(node->lhs->kind != ND_FOR && node->rhs->kind == ND_FOR){
-                gen(node->rhs);
-                gen(node->lhs);
-                printf("    jmp .LbeginXXX\n");
-                printf(".LendXXX:\n");
-                return;
-            }
+        case ND_FOR2:
 
+            gen(node->lhs); 
+            printf(".LbeginXXX:\n");
+            gen(node->rhs); 
+            printf("    pop rax\n");
+            printf("    cmp rax, 0\n");
+            printf("    je  .LendXXX\n");
+
+            return;
+
+        case ND_FOR3:
+
+            gen(node->rhs); 
+            gen(node->lhs); 
+            printf("    jmp .LbeginXXX\n");
+            printf(".LendXXX:\n");
+            return;
+
+        case ND_BLOCK:
+
+                for(int i = 0; i < BLOCK_CODE_NUM; i++){
+                    if(node->block[i]==NULL)
+                        break;
+
+                // printf("block no.%d \n",i);
+                    gen(node->block[i]);
+                    // gen(node->block+i);
+                    // printf("    pop rax\n");
+                }
+                return;
             
     }
 
